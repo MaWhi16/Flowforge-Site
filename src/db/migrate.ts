@@ -53,6 +53,32 @@ async function main() {
   `;
   console.log("  -> sessions ready.");
 
+  console.log("Running migration: create automations table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS automations (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'draft')),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  console.log("  -> automations ready.");
+
+  console.log("Running migration: create activity_log table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      action TEXT NOT NULL,
+      description TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  console.log("  -> activity_log ready.");
+
   console.log("All migrations complete.");
 }
 

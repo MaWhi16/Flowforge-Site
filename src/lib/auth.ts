@@ -97,11 +97,48 @@ export const signupUser = createServerFn()
       RETURNING id
     `;
 
+    const userId = rows[0].id as number;
+
+    // Seed demo automations for new user
+    const demos = [
+      {
+        name: "Lead-to-CRM Sync",
+        description:
+          "Automatically syncs new leads from your forms into your CRM. Routes leads to the right rep based on territory rules.",
+        status: "active",
+      },
+      {
+        name: "Follow-up Sequence",
+        description:
+          "Sends a 3-email follow-up sequence when a lead enters the 'Contacted' stage. Includes personalized merge fields.",
+        status: "active",
+      },
+      {
+        name: "Pipeline Reporter",
+        description:
+          "Generates a weekly pipeline health report and emails it to the sales team every Monday at 8 AM.",
+        status: "active",
+      },
+    ];
+
+    for (const demo of demos) {
+      await sql()`
+        INSERT INTO automations (user_id, name, description, status)
+        VALUES (${userId}, ${demo.name}, ${demo.description}, ${demo.status})
+      `;
+    }
+
+    // Log initial activity
+    await sql()`
+      INSERT INTO activity_log (user_id, action, description)
+      VALUES (${userId}, 'account_created', 'Account created and demo automations seeded')
+    `;
+
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
     await sql()`
       INSERT INTO sessions (id, user_id, expires_at)
-      VALUES (${token}, ${rows[0].id as number}, ${expiresAt})
+      VALUES (${token}, ${userId}, ${expiresAt})
     `;
 
     setCookie(SESSION_COOKIE, token, {
