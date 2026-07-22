@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getUserPlan, type SubscriptionInfo } from "~/lib/billing";
 import { createAutomation } from "~/lib/automations";
 import { DashboardNav } from "~/components/shared/DashboardNav";
+import { Skeleton } from "~/components/shared/Skeleton";
 
 export const Route = createFileRoute("/automations/new")({
   errorComponent: ErrorPage,
@@ -11,11 +12,30 @@ export const Route = createFileRoute("/automations/new")({
 
 function ErrorPage() {
   return (
-    <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold text-slate-800 mb-2">Something went wrong</h2>
-        <p className="text-slate-600 mb-4">Please try again or return to the dashboard.</p>
-        <a href="/dashboard" className="text-blue-600 hover:underline font-medium">Go to Dashboard</a>
+    <div className="min-h-dvh bg-slate-50 flex items-center justify-center px-4">
+      <div className="text-center max-w-md">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-heading font-bold text-navy-800 mb-2">Something went wrong</h2>
+        <p className="text-slate-600 mb-6">An unexpected error occurred while loading this page. Please try again or return to the dashboard.</p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-sm transition-colors shadow-sm"
+          >
+            Try Again
+          </button>
+          <a
+            href="/dashboard"
+            className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 text-sm transition-colors"
+          >
+            Go to Dashboard
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -268,10 +288,18 @@ function CreateAutomationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-slate-500 text-sm">Loading...</p>
+      <div className="min-h-dvh bg-slate-50">
+        <div className="h-16 bg-white border-b border-slate-200" />
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 md:px-8 py-8">
+          <Skeleton className="h-5 w-32 mb-6" />
+          <Skeleton className="h-8 w-56 mb-2" />
+          <Skeleton className="h-4 w-72 mb-8" />
+          <div className="flex items-center justify-center gap-4 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-8 w-8 rounded-full" />
+            ))}
+          </div>
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
       </div>
     );

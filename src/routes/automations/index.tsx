@@ -4,6 +4,7 @@ import { getMyAutomations } from "~/lib/dashboard";
 import { getUserPlan, type SubscriptionInfo } from "~/lib/billing";
 import type { AutomationRecord } from "~/lib/automations";
 import { DashboardNav } from "~/components/shared/DashboardNav";
+import { Skeleton } from "~/components/shared/Skeleton";
 
 export const Route = createFileRoute("/automations/")({
   component: AutomationsPage,
@@ -12,11 +13,30 @@ export const Route = createFileRoute("/automations/")({
 
 function ErrorPage() {
   return (
-    <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold text-slate-800 mb-2">Something went wrong</h2>
-        <p className="text-slate-600 mb-4">Please try again or return to the dashboard.</p>
-        <a href="/dashboard" className="text-blue-600 hover:underline font-medium">Go to Dashboard</a>
+    <div className="min-h-dvh bg-slate-50 flex items-center justify-center px-4">
+      <div className="text-center max-w-md">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-heading font-bold text-navy-800 mb-2">Something went wrong</h2>
+        <p className="text-slate-600 mb-6">An unexpected error occurred while loading this page. Please try again or return to the dashboard.</p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-sm transition-colors shadow-sm"
+          >
+            Try Again
+          </button>
+          <a
+            href="/dashboard"
+            className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 text-sm transition-colors"
+          >
+            Go to Dashboard
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -102,10 +122,17 @@ function AutomationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-slate-500 text-sm">Loading...</p>
+      <div className="min-h-dvh bg-slate-50">
+        <div className="h-16 bg-white border-b border-slate-200" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-8">
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-64 mb-8" />
+          <Skeleton className="h-10 w-40 mb-8" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -157,17 +184,19 @@ function AutomationsPage() {
         {/* Empty state */}
         {automations.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
-            <svg className="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-            </svg>
-            <h3 className="font-heading text-lg font-bold text-navy-800 mb-2">No automations yet</h3>
-            <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto">
-              Create your first automation to start automating your sales workflow.
+            <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+              <svg className="w-10 h-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+              </svg>
+            </div>
+            <h3 className="font-heading text-xl font-bold text-navy-800 mb-2">No automations yet</h3>
+            <p className="text-slate-500 text-sm mb-8 max-w-sm mx-auto">
+              Automate your sales workflow by connecting tools and building custom workflows. Create your first automation to get started.
             </p>
             <a
               href="/automations/new"
               onClick={(e) => { e.preventDefault(); window.location.href = "/automations/new"; }}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 px-5 py-2.5 text-sm transition-colors duration-200 shadow-sm"
+              className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 px-6 py-3 text-sm transition-colors duration-200 shadow-sm"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

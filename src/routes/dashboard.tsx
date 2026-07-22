@@ -12,6 +12,7 @@ import {
 } from "~/lib/dashboard";
 import { getUserPlan, getAutomationLimit } from "~/lib/billing";
 import { DashboardNav } from "~/components/shared/DashboardNav";
+import { Skeleton } from "~/components/shared/Skeleton";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
@@ -245,6 +246,39 @@ function DashboardPage() {
           />
         </div>
 
+        {/* Getting Started Checklist — shown when no automations exist */}
+        {automations.length === 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm mb-8">
+            <h3 className="font-heading font-bold text-lg text-navy-800 mb-5">🚀 Get Started in 3 Steps</h3>
+            <div className="space-y-4">
+              {[
+                { step: 1, title: "Create your first automation", desc: "Build a workflow that connects your tools", link: "/automations/new", linkText: "Create Automation" },
+                { step: 2, title: "Copy your webhook URL", desc: "Use it to capture data from forms, CRMs, and more", link: "#webhook", linkText: "View Webhook" },
+                { step: 3, title: "Choose a plan", desc: "Unlock unlimited automations and priority support", link: "/plans", linkText: "View Plans" },
+              ].map((s) => (
+                <div key={s.step} className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">{s.step}</div>
+                  <div>
+                    <p className="font-medium text-slate-800">{s.title}</p>
+                    <p className="text-sm text-slate-500 mt-0.5">{s.desc}</p>
+                    <a
+                      href={s.link}
+                      onClick={(e) => {
+                        if (s.link.startsWith("#")) return;
+                        e.preventDefault();
+                        window.location.href = s.link;
+                      }}
+                      className="text-sm text-blue-600 hover:underline font-medium mt-1 inline-block"
+                    >
+                      {s.linkText} →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Two-Column: Recent Activity + My Automations */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Recent Activity */}
@@ -283,36 +317,65 @@ function DashboardPage() {
               My Automations
             </h2>
             {automations.length === 0 ? (
-              <p className="text-sm text-slate-400 py-6 text-center">
-                No automations yet.{" "}
-                <a href="/automations/new" onClick={(e) => { e.preventDefault(); window.location.href = '/automations/new'; }} className="text-blue-600 hover:underline font-medium">
+              <div className="text-center py-8">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-slate-400 mb-3">
+                  No automations yet.
+                </p>
+                <a
+                  href="/automations/new"
+                  onClick={(e) => { e.preventDefault(); window.location.href = '/automations/new'; }}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
                   Create your first automation
                 </a>
-                .
-              </p>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {automations.slice(0, 5).map((auto) => (
                   <a
                     key={auto.id}
                     href={`/automations/${auto.id}`}
                     onClick={(e) => { e.preventDefault(); window.location.href = `/automations/${auto.id}`; }}
-                    className="block bg-slate-50 rounded-lg p-3 border border-slate-100 hover:border-slate-200 transition-colors"
+                    className="block bg-slate-50 rounded-lg p-3.5 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm transition-all duration-200 group"
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`w-2 h-2 rounded-full ${
-                        auto.status === "active" ? "bg-emerald-500 animate-pulse" :
-                        auto.status === "paused" ? "bg-amber-500" : "bg-slate-400"
-                      }`} />
-                      <span className="text-sm font-semibold text-navy-800">{auto.name}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${
+                          auto.status === "active" ? "bg-emerald-500 animate-pulse" :
+                          auto.status === "paused" ? "bg-amber-500" : "bg-slate-400"
+                        }`} />
+                        <span className="text-sm font-semibold text-navy-800 group-hover:text-blue-700 transition-colors">{auto.name}</span>
+                      </div>
+                      {auto.lastRunAt ? (
+                        <span className="text-xs text-slate-400">{formatTimeAgo(auto.lastRunAt)}</span>
+                      ) : (
+                        <span className="text-xs text-slate-300">Never run</span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-500 ml-4">{auto.description ?? "No description"}</p>
                   </a>
                 ))}
+                {isOverLimit && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                    You have {automations.length} automations but your plan only shows {displayAutomationCount}.{" "}
+                    <a href="/plans" className="font-semibold underline hover:text-amber-800">Upgrade →</a>
+                  </div>
+                )}
                 <a
                   href="/automations"
                   onClick={(e) => { e.preventDefault(); window.location.href = '/automations'; }}
-                  className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700 mt-2 py-2 rounded-lg border border-blue-200 hover:border-blue-300 transition-colors"
+                  className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700 mt-3 py-2 rounded-lg border border-blue-200 hover:border-blue-300 transition-colors"
                 >
                   Manage Automations →
                 </a>
