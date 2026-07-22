@@ -8,13 +8,8 @@ import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations/$id")({
   beforeLoad: async ({ params }) => {
-    let user = null;
-    try {
-      user = await getCurrentUserFn();
-    } catch {
-      throw redirect({ to: "/login" });
-    }
-    if (!user || !user.id) {
+    const user = await getCurrentUserFn();
+    if (!user) {
       throw redirect({ to: "/login" });
     }
 
@@ -27,7 +22,7 @@ export const Route = createFileRoute("/automations/$id")({
     const [automation, runs, subscription] = await Promise.all([
       getAutomation({ data: { userId, automationId } }),
       getAutomationRuns({ data: { userId, automationId } }),
-      getUserPlan({ data: { userId } }).catch(() => ({ plan: null, status: null, currentPeriodEnd: null })),
+      getUserPlan({ data: { userId } }),
     ]);
 
     if (!automation) {

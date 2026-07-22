@@ -7,17 +7,12 @@ import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations/new")({
   beforeLoad: async () => {
-    let user = null;
-    try {
-      user = await getCurrentUserFn();
-    } catch {
-      throw redirect({ to: "/login" });
-    }
-    if (!user || !user.id) {
+    const user = await getCurrentUserFn();
+    if (!user) {
       throw redirect({ to: "/login" });
     }
 
-    const subscription = await getUserPlan({ data: { userId: user.id } }).catch(() => ({ plan: null, status: null, currentPeriodEnd: null }));
+    const subscription = await getUserPlan({ data: { userId: user.id } });
 
     return { user, subscription };
   },
