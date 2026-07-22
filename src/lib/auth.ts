@@ -114,6 +114,48 @@ export const signupUser = createServerFn()
       VALUES (${userId}, 'account_created', 'Account created')
     `;
 
+    // Create demo automations for new users
+    const demoAutomations = [
+      {
+        name: "CRM Lead → Slack Alert",
+        description: "Forward new CRM leads to your team's Slack channel in real-time",
+        trigger_type: "webhook",
+        trigger_config: JSON.stringify({ endpoint: "CRM" }),
+        steps: JSON.stringify([
+          { type: "log", message: "New lead received: {{body.email}} from {{body.company}}" },
+          { type: "forward", url: "https://hooks.slack.com/services/demo", method: "POST", headers: [{ key: "Content-Type", value: "application/json" }] }
+        ]),
+        status: "active",
+      },
+      {
+        name: "Form → Spreadsheet Logger",
+        description: "Capture form submissions and log them for reporting",
+        trigger_type: "webhook",
+        trigger_config: JSON.stringify({ endpoint: "Typeform" }),
+        steps: JSON.stringify([
+          { type: "log", message: "Form submitted from {{source_ip}} — {{body.name}} ({{body.email}})" }
+        ]),
+        status: "draft",
+      },
+      {
+        name: "Weekly Pipeline Report",
+        description: "Generate a weekly summary of all captured activity",
+        trigger_type: "manual",
+        trigger_config: JSON.stringify({}),
+        steps: JSON.stringify([
+          { type: "log", message: "Weekly report triggered — {{method}} request received" }
+        ]),
+        status: "draft",
+      },
+    ];
+
+    for (const demo of demoAutomations) {
+      await sql()`
+        INSERT INTO automations (user_id, name, description, trigger_type, trigger_config, steps, status)
+        VALUES (${userId}, ${demo.name}, ${demo.description}, ${demo.trigger_type}, ${demo.trigger_config}::jsonb, ${demo.steps}::jsonb, ${demo.status})
+      `;
+    }
+
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
     await sql()`

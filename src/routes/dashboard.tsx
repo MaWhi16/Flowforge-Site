@@ -124,6 +124,33 @@ function DashboardPage() {
           </div>
         )}
 
+        {/* Welcome Tour Banner — show for new users with demo automations */}
+        {(() => {
+          const hasAnyRuns = automations.some((a: any) => (a.runCount ?? 0) > 0);
+          if (!hasAnyRuns && automations.length > 0) {
+            return (
+              <div className="mb-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-5 text-white shadow-md">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <p className="font-heading font-bold text-lg">👋 Welcome to FlowForge!</p>
+                    <p className="text-sm text-purple-100 mt-1">
+                      We've set up {automations.length} sample automations to show you what's possible. 
+                      Start by testing your webhook URL, then customize or create your own automations.
+                    </p>
+                  </div>
+                  <a
+                    href="/automations"
+                    className="shrink-0 bg-white text-purple-700 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors duration-200 shadow-sm text-center"
+                  >
+                    View Automations →
+                  </a>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
         {/* Welcome Bar */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-8">
           <div>
