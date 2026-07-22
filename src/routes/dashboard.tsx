@@ -19,34 +19,79 @@ export const Route = createFileRoute("/dashboard")({
       throw redirect({ to: "/login" });
     }
 
-    const [metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount] =
-      await Promise.all([
-        getDashboardMetrics(),
-        getRecentActivity(),
-        getMyAutomations(),
-        getUserPlan(),
-        getWebhookUrl(),
-        getWebhookEvents(),
-        getWebhookCount(),
-      ]);
+    try {
+      const [metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount] =
+        await Promise.all([
+          getDashboardMetrics(),
+          getRecentActivity(),
+          getMyAutomations(),
+          getUserPlan(),
+          getWebhookUrl(),
+          getWebhookEvents(),
+          getWebhookCount(),
+        ]);
 
-    // Log dashboard visit (fire-and-forget)
-    logActivity({
-      userId: user.id,
-      action: "dashboard_visit",
-      description: "Visited dashboard",
-    }).catch(() => {});
+      // Log dashboard visit (fire-and-forget)
+      logActivity({
+        userId: user.id,
+        action: "dashboard_visit",
+        description: "Visited dashboard",
+      }).catch(() => {});
 
-    return { user, metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount };
+      return { user, metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount };
+    } catch {
+      // SSR may fail if cookies aren't forwarded to downstream server functions.
+      // Return safe defaults — the client will re-fetch after hydration.
+      return {
+        user,
+        metrics: { activeAutomations: 0, tasksThisWeek: 0, hoursSaved: 0, systemStatus: "Loading..." as const },
+        activity: [],
+        automations: [],
+        subscription: { plan: null, status: null, currentPeriodEnd: null },
+        webhookInfo: null,
+        webhookEvents: [],
+        webhookCount: 0,
+      };
+    }
   },
   component: DashboardPage,
 });
 
 function DashboardPage() {
-  const { user, metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount } =
-    Route.useLoaderData();
+  const loaderData = Route.useLoaderData();
+  const {
+    user,
+    metrics,
+    activity,
+    automations,
+    subscription,
+    webhookInfo,
+    webhookEvents,
+    webhookCount,
+  } = loaderData ?? {
+    user: null,
+    metrics: null,
+    activity: [],
+    automations: [],
+    subscription: { plan: null, status: null, currentPeriodEnd: null },
+    webhookInfo: null,
+    webhookEvents: [],
+    webhookCount: 0,
+  };
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [testResult, setTestResult] = useState<string | null>(null);
+
+  // SSR may deliver null/undefined loader data; show a loading state until hydrated.
+  if (!user || !metrics) {
+    return (
+      <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-slate-500 text-lg font-medium">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   const currentPlan = subscription.plan;
   const isActive = subscription.status === "active";
