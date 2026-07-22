@@ -1,38 +1,15 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { getCurrentUserFn } from "~/lib/auth";
-import { getUserPlan } from "~/lib/billing";
+import { getUserPlan, type SubscriptionInfo } from "~/lib/billing";
 import { getAutomation, updateAutomation, deleteAutomation, getAutomationRuns } from "~/lib/automations";
-import type { AutomationRunRecord } from "~/lib/automations";
+import type { AutomationRunRecord, AutomationRecord } from "~/lib/automations";
 import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations/$id")({
-  beforeLoad: async ({ params }) => {
-    const user = await getCurrentUserFn();
-    if (!user) {
-      throw redirect({ to: "/login" });
-    }
-
-    const userId = user.id;
-    const automationId = parseInt(params.id, 10);
-    if (isNaN(automationId)) {
-      throw redirect({ to: "/automations" });
-    }
-
-    const [automation, runs, subscription] = await Promise.all([
-      getAutomation({ data: { userId, automationId } }),
-      getAutomationRuns({ data: { userId, automationId } }),
-      getUserPlan({ data: { userId } }),
-    ]);
-
-    if (!automation) {
-      throw redirect({ to: "/automations" });
-    }
-
-    return { user, automation, runs, subscription };
-  },
   component: AutomationDetailPage,
 });
+
 
 // ── Helpers ──
 
@@ -105,26 +82,73 @@ function RunStatusBadge({ status }: { status: AutomationRunRecord["status"] }) {
   );
 }
 
+
 // ── Page Component ──
 
 function AutomationDetailPage() {
   const navigate = useNavigate();
-  const loaderData = Route.useLoaderData();
-  const { user, automation, runs, subscription } = loaderData ?? {
-    user: null as { id: number; email: string; name: string } | null,
-    automation: null as {
-      id: number;
-      name: string;
-      description?: string | null;
-      triggerType?: string | null;
-      triggerConfig?: Record<string, unknown> | null;
-      status?: string | null;
-      runCount?: number | null;
-      steps?: unknown;
-    } | null,
-    runs: [] as AutomationRunRecord[],
-    subscription: { plan: null, status: null, currentPeriodEnd: null } as { plan: string | null; status: string | null; currentPeriodEnd: string | null },
-  };
+  const params = useParams({ from: "/automations/$id" });
+
+  // Auth + data state — loaded in useEffect to avoid createServerFn
+  // serialization issues during client-side navigation
+  const [authUser, setAuthUser] = useState<{ id: number; email: string; name: string } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [automation, setAutomation] = useState<AutomationRecord | null>(null);
+  const [runs, setRuns] = useState<AutomationRunRecord[]>([]);
+  const [subscription, setSubscription] = useState<SubscriptionInfo>({ plan: null, status: null, currentPeriodEnd: null });
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    const automationId = parseInt(params.id, 10);
+    if (isNaN(automationId)) {
+      window.location.href = "/automations";
+      return;
+    }
+
+    getCurrentUserFn()
+      .then(async (u) => {
+        if (!u || !u.id) {
+          window.location.href = "/login";
+          return;
+        }
+        setAuthUser(u);
+        setAuthLoading(false);
+
+        const [auto, runData, sub] = await Promise.all([
+          getAutomation({ data: { userId: u.id, automationId } }),
+          getAutomationRuns({ data: { userId: u.id, automationId } }),
+          getUserPlan({ data: { userId: u.id } }),
+        ]);
+
+        if (!auto) {
+          window.location.href = "/automations";
+          return;
+        }
+
+        setAutomation(auto);
+        setRuns(runData);
+        setSubscription(sub);
+        setDataLoading(false);
+      })
+      .catch(() => {
+        window.location.href = "/login";
+      });
+  }, [params.id]);
+
+  // Show loading spinner while auth or data resolves
+  if (authLoading || dataLoading) {
+    return (
+      <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <svg className="w-8 h-8 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <span className="text-sm text-slate-500">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   const currentPlan = subscription.plan;
   const isActive = subscription.status === "active";
@@ -137,12 +161,7 @@ function AutomationDetailPage() {
       : "bg-amber-100 text-amber-700"
     : "bg-slate-100 text-slate-600";
 
-  const [statusUpdating, setStatusUpdating] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [expandedRuns, setExpandedRuns] = useState<Set<number>>(new Set());
-  const [serverError, setServerError] = useState("");
-
+  // Safety: redirect handled above, but guard for type safety
   if (!automation) {
     return null;
   }
@@ -157,7 +176,7 @@ function AutomationDetailPage() {
       const newStatus = automation!.status === "active" ? "paused" : "active";
       await updateAutomation({
         data: {
-          userId: user!.id,
+          userId: authUser!.id,
           automationId: automation!.id,
           status: newStatus,
         },
@@ -177,7 +196,7 @@ function AutomationDetailPage() {
     try {
       await deleteAutomation({
         data: {
-          userId: user!.id,
+          userId: authUser!.id,
           automationId: automation!.id,
         },
       });
@@ -203,7 +222,7 @@ function AutomationDetailPage() {
   return (
     <div className="min-h-dvh bg-slate-50">
       <DashboardNav
-        userEmail={user?.email ?? ""}
+        userEmail={authUser?.email ?? ""}
         planLabel={planLabel}
         planBadgeColor={planBadgeColor}
       />
