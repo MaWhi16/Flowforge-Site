@@ -164,9 +164,9 @@ export interface AutomationRunRecord {
 export const getAutomationRuns = createServerFn()
   .validator((d: { userId: number; automationId: number }) => d)
   .handler(async ({ data }): Promise<AutomationRunRecord[]> => {
-    // Verify ownership first
+    // Verify ownership first; return empty array if not found (don't throw)
     const auto = await sql()`SELECT id FROM automations WHERE id = ${data.automationId} AND user_id = ${data.userId}`;
-    if (auto.length === 0) throw new Error("Automation not found");
+    if (auto.length === 0) return [];
 
     const rows = await sql()`
       SELECT id, status, started_at, completed_at, trigger_event, step_results, error_message
