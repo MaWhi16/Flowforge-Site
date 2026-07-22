@@ -93,6 +93,31 @@ async function main() {
   `;
   console.log("  -> subscriptions ready.");
 
+  console.log("Running migration: create webhook_endpoints table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS webhook_endpoints (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) UNIQUE,
+      token TEXT UNIQUE NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  console.log("  -> webhook_endpoints ready.");
+
+  console.log("Running migration: create webhook_events table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS webhook_events (
+      id SERIAL PRIMARY KEY,
+      endpoint_id INTEGER REFERENCES webhook_endpoints(id),
+      method TEXT,
+      headers JSONB,
+      body JSONB,
+      source_ip TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  console.log("  -> webhook_events ready.");
+
   console.log("All migrations complete.");
 }
 

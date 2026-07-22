@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { getCurrentUserFn } from "~/lib/auth";
 import {
   getDashboardMetrics,
   getRecentActivity,
   getMyAutomations,
+  getWebhookUrl,
+  getWebhookEvents,
+  getWebhookCount,
   logActivity,
 } from "~/lib/dashboard";
 import { getUserPlan, getAutomationLimit } from "~/lib/billing";
@@ -15,12 +19,16 @@ export const Route = createFileRoute("/dashboard")({
       throw redirect({ to: "/login" });
     }
 
-    const [metrics, activity, automations, subscription] = await Promise.all([
-      getDashboardMetrics(),
-      getRecentActivity(),
-      getMyAutomations(),
-      getUserPlan(),
-    ]);
+    const [metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount] =
+      await Promise.all([
+        getDashboardMetrics(),
+        getRecentActivity(),
+        getMyAutomations(),
+        getUserPlan(),
+        getWebhookUrl(),
+        getWebhookEvents(),
+        getWebhookCount(),
+      ]);
 
     // Log dashboard visit (fire-and-forget)
     logActivity({
@@ -29,13 +37,16 @@ export const Route = createFileRoute("/dashboard")({
       description: "Visited dashboard",
     }).catch(() => {});
 
-    return { user, metrics, activity, automations, subscription };
+    return { user, metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount };
   },
   component: DashboardPage,
 });
 
 function DashboardPage() {
-  const { user, metrics, activity, automations, subscription } = Route.useLoaderData();
+  const { user, metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount } =
+    Route.useLoaderData();
+  const [copyLabel, setCopyLabel] = useState("Copy");
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   const currentPlan = subscription.plan;
   const isActive = subscription.status === "active";
@@ -150,6 +161,68 @@ function DashboardPage() {
           </div>
         </div>
 
+        {/* Webhook URL Section */}
+        {webhookInfo && (
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-5 text-white shadow-md mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="font-heading font-bold text-lg">🔗 Your Webhook URL</p>
+                <p className="text-sm text-blue-100 mt-1 mb-2">
+                  Point any form, tool, or service at this URL to capture data.
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="bg-white/15 rounded-lg px-3 py-2 text-sm font-mono text-white break-all select-all">
+                    {webhookInfo.url}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(webhookInfo.url);
+                        setCopyLabel("Copied!");
+                        setTimeout(() => setCopyLabel("Copy"), 2000);
+                      } catch {
+                        setCopyLabel("Failed");
+                        setTimeout(() => setCopyLabel("Copy"), 2000);
+                      }
+                    }}
+                    className="shrink-0 bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors duration-200 shadow-sm"
+                  >
+                    {copyLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setTestResult(null);
+                      try {
+                        const res = await fetch(webhookInfo.url, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            test: true,
+                            timestamp: new Date().toISOString(),
+                            message: "Hello from FlowForge!",
+                          }),
+                        });
+                        const data = await res.json() as { received: boolean; event_id: number };
+                        setTestResult(`✅ Sent! Event #${data.event_id} logged.`);
+                      } catch {
+                        setTestResult("❌ Failed to send test.");
+                      }
+                    }}
+                    className="shrink-0 bg-white/15 text-white border border-white/30 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/25 transition-colors duration-200"
+                  >
+                    Test it
+                  </button>
+                </div>
+                {testResult && (
+                  <p className="text-sm text-blue-100 mt-2">{testResult}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Metric Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <MetricCard
@@ -163,8 +236,8 @@ function DashboardPage() {
             }
           />
           <MetricCard
-            value={metrics.tasksThisWeek}
-            label="Tasks Processed (Week)"
+            value={webhookCount}
+            label="Webhooks Received (Week)"
             accent="emerald"
             icon={
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -256,6 +329,75 @@ function DashboardPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Recent Webhook Events */}
+        <div className="mt-6 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+          <h2 className="font-heading text-lg font-bold text-navy-800 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+            </svg>
+            Recent Webhook Events
+          </h2>
+          {webhookEvents.length === 0 ? (
+            <p className="text-sm text-slate-400 py-6 text-center">
+              No webhook events yet. Send a test or point a service at your webhook URL to see events here.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                      Time
+                    </th>
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                      Method
+                    </th>
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                      Source IP
+                    </th>
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+                      Body Preview
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {webhookEvents.map((evt) => {
+                    const bodyStr =
+                      typeof evt.body === "string"
+                        ? evt.body
+                        : JSON.stringify(evt.body);
+                    const preview =
+                      bodyStr.length > 80
+                        ? bodyStr.slice(0, 80) + "…"
+                        : bodyStr;
+                    return (
+                      <tr
+                        key={evt.id}
+                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+                          {formatTimeAgo(evt.createdAt)}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="inline-block px-2 py-0.5 rounded text-xs font-mono font-semibold bg-slate-100 text-slate-700">
+                            {evt.method}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-500 font-mono text-xs">
+                          {evt.sourceIp}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600 font-mono text-xs max-w-xs truncate">
+                          {preview}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

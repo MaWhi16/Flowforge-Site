@@ -128,6 +128,13 @@ export const signupUser = createServerFn()
       `;
     }
 
+    // Create webhook endpoint for the new user
+    const webhookToken = crypto.randomUUID();
+    await sql()`
+      INSERT INTO webhook_endpoints (user_id, token)
+      VALUES (${userId}, ${webhookToken})
+    `;
+
     // Log initial activity
     await sql()`
       INSERT INTO activity_log (user_id, action, description)

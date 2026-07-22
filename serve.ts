@@ -9,6 +9,97 @@
 // with an already-running server. Every sandbox user has passwordless sudo, so
 // the takeover works across user boundaries.
 import handler from "./dist/server/server.js";
+import { neon } from "@neondatabase/serverless";
+
+// ── Webhook handler ──
+// Handles /api/webhook/{token} — public, no auth required.
+async function handleWebhook(req: Request, token: string): Promise<Response> {
+  const url = process.env.DATABASE_URL;
+  if (!url || url === "npx neonctl@latest init") {
+    return new Response(JSON.stringify({ error: "Database not configured" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const sql = neon(url);
+
+  // Look up the webhook endpoint
+  const endpoints = await sql`
+    SELECT id, user_id FROM webhook_endpoints WHERE token = ${token}
+  `;
+
+  if (endpoints.length === 0) {
+    return new Response(JSON.stringify({ error: "Not found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const endpoint = endpoints[0] as { id: number; user_id: number };
+
+  // GET: return status
+  if (req.method === "GET") {
+    return new Response(
+      JSON.stringify({
+        status: "ok",
+        message: "Webhook endpoint is active. Send a POST request to trigger it.",
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  // POST (or any other method): log the event
+  const method = req.method;
+  const sourceIp =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+
+  // Serialize headers
+  const headersObj: Record<string, string> = {};
+  req.headers.forEach((value, key) => {
+    headersObj[key] = value;
+  });
+
+  // Parse body
+  let body: unknown;
+  const ct = req.headers.get("content-type") || "";
+  try {
+    if (ct.includes("application/json")) {
+      body = await req.json();
+    } else {
+      body = await req.text();
+    }
+  } catch {
+    body = await req.text().catch(() => "(unreadable body)");
+  }
+
+  const result = await sql`
+    INSERT INTO webhook_events (endpoint_id, method, headers, body, source_ip)
+    VALUES (${endpoint.id}, ${method}, ${JSON.stringify(headersObj)}, ${JSON.stringify(body)}, ${sourceIp})
+    RETURNING id
+  `;
+
+  const eventId = (result[0] as { id: number }).id;
+
+  // Log activity
+  await sql`
+    INSERT INTO activity_log (user_id, action, description)
+    VALUES (${endpoint.user_id}, 'webhook_received', ${`Webhook received from ${sourceIp}`})
+  `;
+
+  return new Response(
+    JSON.stringify({ received: true, event_id: eventId }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+}
 
 // Pinned, NOT read from the environment. The published preview URL
 // (<label>.<PUBLIC_SITE_DOMAIN>) is reverse-proxied to 0.0.0.0:3000 inside the
@@ -40,7 +131,17 @@ for (let attempt = 1; ; attempt++) {
       port: PORT,
       hostname: HOST,
       async fetch(req) {
-        const { pathname } = new URL(req.url);
+        const url = new URL(req.url);
+        const { pathname } = url;
+
+        // Webhook API: /api/webhook/{token}
+        if (pathname.startsWith("/api/webhook/")) {
+          const token = pathname.slice("/api/webhook/".length);
+          if (token.length > 0 && /^[a-f0-9-]+$/i.test(token)) {
+            return handleWebhook(req, token);
+          }
+        }
+
         if (pathname !== "/") {
           const file = Bun.file(CLIENT_DIR + pathname);
           if (await file.exists()) return new Response(file);

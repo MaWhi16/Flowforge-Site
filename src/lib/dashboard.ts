@@ -94,6 +94,59 @@ export const logActivity = createServerFn()
     `;
   });
 
+export const getWebhookUrl = createServerFn().handler(async () => {
+  const userId = await getUserId();
+  if (!userId) throw new Error("Not authenticated");
+
+  const rows = await sql()`
+    SELECT token FROM webhook_endpoints WHERE user_id = ${userId}
+  `;
+
+  if (rows.length === 0) return null;
+
+  return {
+    url: `https://8bdc95fda247795371108ac5ab31ac26.ctonew.app/api/webhook/${rows[0].token as string}`,
+    token: rows[0].token as string,
+  };
+});
+
+export const getWebhookEvents = createServerFn().handler(async () => {
+  const userId = await getUserId();
+  if (!userId) throw new Error("Not authenticated");
+
+  const rows = await sql()`
+    SELECT we.id, we.method, we.body, we.source_ip, we.created_at
+    FROM webhook_events we
+    JOIN webhook_endpoints wen ON wen.id = we.endpoint_id
+    WHERE wen.user_id = ${userId}
+    ORDER BY we.created_at DESC
+    LIMIT 10
+  `;
+
+  return rows.map((r) => ({
+    id: r.id as number,
+    method: r.method as string,
+    body: r.body as unknown,
+    sourceIp: r.source_ip as string,
+    createdAt: String(r.created_at),
+  }));
+});
+
+export const getWebhookCount = createServerFn().handler(async () => {
+  const userId = await getUserId();
+  if (!userId) throw new Error("Not authenticated");
+
+  const rows = await sql()`
+    SELECT COUNT(*)::int as count
+    FROM webhook_events we
+    JOIN webhook_endpoints wen ON wen.id = we.endpoint_id
+    WHERE wen.user_id = ${userId}
+    AND we.created_at > NOW() - INTERVAL '7 days'
+  `;
+
+  return rows[0].count as number;
+});
+
 export const seedDemoAutomations = createServerFn()
   .validator((data: unknown) => {
     const d = data as { userId: number };
