@@ -63,7 +63,7 @@ export function Pricing() {
               "SSO & audit logs",
             ]}
             cta="Talk to Sales"
-            href="mailto:hello@flowforge.dev?subject=Enterprise%20Inquiry"
+            href="/contact"
             featured={false}
           />
         </div>

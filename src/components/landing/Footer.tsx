@@ -32,7 +32,7 @@ export function Footer() {
               <FooterLink href="#">About</FooterLink>
               <FooterLink href="#">Blog</FooterLink>
               <FooterLink href="#">Careers</FooterLink>
-              <FooterLink href="mailto:hello@flowforge.dev">Contact</FooterLink>
+              <FooterLink href="/contact">Contact</FooterLink>
             </ul>
           </div>
 
