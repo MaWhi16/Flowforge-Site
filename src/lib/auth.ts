@@ -42,7 +42,9 @@ export const getAuthState = createServerFn().handler(async () => {
 });
 
 /** Server function: get the current user or null (for route loaders). */
-export const getCurrentUserFn = createServerFn().handler(async () => {
+export const getCurrentUserFn = createServerFn()
+  .validator((d: unknown) => d as undefined)
+  .handler(async () => {
   const token = getCookie(SESSION_COOKIE);
   if (!token) return null;
 
