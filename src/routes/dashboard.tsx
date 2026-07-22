@@ -10,7 +10,7 @@ import {
   getWebhookCount,
   logActivity,
 } from "~/lib/dashboard";
-import { getUserPlan } from "~/lib/billing";
+import { getUserPlan, getAutomationLimit } from "~/lib/billing";
 import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/dashboard")({
@@ -84,6 +84,12 @@ function DashboardPage() {
     month: "long",
     day: "numeric",
   });
+
+  const automationLimit = getAutomationLimit(isActive ? currentPlan : null);
+  const displayAutomationCount = automationLimit === Infinity
+    ? automations.length
+    : Math.min(automations.length, automationLimit);
+  const isOverLimit = automations.length > displayAutomationCount;
 
   return (
     <div className="min-h-dvh bg-slate-50">
