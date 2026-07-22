@@ -118,6 +118,66 @@ async function main() {
   `;
   console.log("  -> webhook_events ready.");
 
+  console.log("Running migration: extend automations table with trigger/step fields...");
+  await sql`
+    ALTER TABLE automations
+      ADD COLUMN IF NOT EXISTS trigger_type TEXT NOT NULL DEFAULT 'manual'
+  `;
+  await sql`
+    ALTER TABLE automations
+      ADD COLUMN IF NOT EXISTS trigger_config JSONB NOT NULL DEFAULT '{}'
+  `;
+  await sql`
+    ALTER TABLE automations
+      ADD COLUMN IF NOT EXISTS steps JSONB NOT NULL DEFAULT '[]'
+  `;
+  await sql`
+    ALTER TABLE automations
+      ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ
+  `;
+  await sql`
+    ALTER TABLE automations
+      ADD COLUMN IF NOT EXISTS run_count INTEGER NOT NULL DEFAULT 0
+  `;
+  // Idempotent CHECK constraint: only add if not already present
+  await sql`
+    DO \$\$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'automations_trigger_type_check'
+      ) THEN
+        ALTER TABLE automations
+          ADD CONSTRAINT automations_trigger_type_check
+          CHECK (trigger_type IN ('webhook', 'manual', 'schedule'));
+      END IF;
+    END \$\$;
+  `;
+  console.log("  -> automations columns extended.");
+
+  console.log("Running migration: create automation_runs table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS automation_runs (
+      id SERIAL PRIMARY KEY,
+      automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'failed')),
+      started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at TIMESTAMPTZ,
+      trigger_event JSONB,
+      step_results JSONB NOT NULL DEFAULT '[]',
+      error_message TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  console.log("  -> automation_runs table ready.");
+
+  console.log("Running migration: create automation_runs indexes...");
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_automation_runs_automation_id ON automation_runs(automation_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_automation_runs_status ON automation_runs(status)
+  `;
+  console.log("  -> automation_runs indexes ready.");
+
   console.log("All migrations complete.");
 }
 
