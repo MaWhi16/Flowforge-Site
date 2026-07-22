@@ -10,6 +10,9 @@
 // the takeover works across user boundaries.
 import handler from "./dist/server/server.js";
 import { neon } from "@neondatabase/serverless";
+import {
+  executeAutomationsForWebhook,
+} from "./src/lib/engine.js";
 
 // ── Webhook handler ──
 // Handles /api/webhook/{token} — public, no auth required.
@@ -92,8 +95,32 @@ async function handleWebhook(req: Request, token: string): Promise<Response> {
     VALUES (${endpoint.user_id}, 'webhook_received', ${`Webhook received from ${sourceIp}`})
   `;
 
+  // Quick count of matching automations (fast — just a COUNT, no JSONB reads)
+  const countResult = await sql`
+    SELECT COUNT(*)::int as count
+    FROM automations
+    WHERE user_id = ${endpoint.user_id}
+      AND status = 'active'
+      AND trigger_type = 'webhook'
+  `;
+  const triggeredCount = (countResult[0] as { count: number }).count;
+
+  // Fire-and-forget the engine so the webhook response stays fast
+  executeAutomationsForWebhook(endpoint.id, endpoint.user_id, {
+    method,
+    headers: headersObj,
+    body,
+    sourceIp,
+  }).catch((err) => {
+    console.error("Automation engine error:", err);
+  });
+
   return new Response(
-    JSON.stringify({ received: true, event_id: eventId }),
+    JSON.stringify({
+      received: true,
+      event_id: eventId,
+      triggered: triggeredCount,
+    }),
     {
       status: 200,
       headers: { "Content-Type": "application/json" },
