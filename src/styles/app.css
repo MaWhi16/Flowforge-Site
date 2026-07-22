@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-800: #1E3A5F;
+  --color-navy-900: #152E4A;
+  --font-heading: 'DM Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  html,
+  body {
+    @apply bg-white text-slate-800 antialiased;
+    font-family: var(--font-body);
+  }
+}
+
+@layer utilities {
+  .font-heading {
+    font-family: var(--font-heading);
+  }
+}
