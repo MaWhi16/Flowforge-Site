@@ -1,5 +1,5 @@
 /**
- * Migration: create contact_submissions table.
+ * Migrations: create contact_submissions, users, and sessions tables.
  *
  * Run with: bun run src/db/migrate.ts
  * Requires DATABASE_URL to be set.
@@ -28,7 +28,32 @@ async function main() {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `;
-  console.log("Migration complete: contact_submissions table is ready.");
+  console.log("  -> contact_submissions ready.");
+
+  console.log("Running migration: create users table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      name TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  console.log("  -> users ready.");
+
+  console.log("Running migration: create sessions table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW(),
+      expires_at TIMESTAMP NOT NULL
+    )
+  `;
+  console.log("  -> sessions ready.");
+
+  console.log("All migrations complete.");
 }
 
 main().catch((err) => {
