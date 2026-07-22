@@ -156,6 +156,14 @@ export const signupUser = createServerFn()
       `;
     }
 
+    // Enqueue welcome email
+    const { enqueueEmail } = await import("~/lib/email");
+    await enqueueEmail(
+      data.email,
+      "Welcome to FlowForge! 🚀",
+      `Hi ${data.name},\n\nWelcome to FlowForge! We've set up 3 sample automations to show you what's possible with workflow automation.\n\nHere's how to get started:\n\n1. Visit your dashboard: ${process.env.SITE_URL || 'https://8bdc95fda247795371108ac5ab31ac26.ctonew.app'}/dashboard\n2. Check out your sample automations\n3. Copy your webhook URL and send a test event\n\nQuestions? Just reply to this email.\n\n— The FlowForge Team`
+    );
+
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
     await sql()`

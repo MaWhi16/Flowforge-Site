@@ -178,6 +178,20 @@ async function main() {
   `;
   console.log("  -> automation_runs indexes ready.");
 
+  console.log("Running migration: create email_queue table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS email_queue (
+      id SERIAL PRIMARY KEY,
+      to_email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed')),
+      created_at TIMESTAMP DEFAULT NOW(),
+      sent_at TIMESTAMP
+    )
+  `;
+  console.log("  -> email_queue table ready.");
+
   console.log("All migrations complete.");
 }
 

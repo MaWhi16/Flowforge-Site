@@ -271,6 +271,14 @@ for (let attempt = 1; ; attempt++) {
               });
             }
 
+            // Enqueue payment confirmation email
+            const { enqueueEmail } = await import("./src/lib/email.js");
+            await enqueueEmail(
+              email,
+              "Payment Confirmed — FlowForge " + (plan === "pro" ? "Pro" : "Starter"),
+              `Hi there,\n\nYour payment of ${(amountCents / 100).toFixed(0)} for the FlowForge ${plan === "pro" ? "Pro" : "Starter"} plan was successful!\n\nYour account has been upgraded and you now have full access to all ${plan === "pro" ? "Pro" : "Starter"} features.\n\nVisit your dashboard: ${process.env.SITE_URL || 'https://8bdc95fda247795371108ac5ab31ac26.ctonew.app'}/dashboard\n\n— The FlowForge Team`
+            );
+
             return new Response(JSON.stringify({ success: true, plan }), {
               status: 200,
               headers: { "Content-Type": "application/json" },
