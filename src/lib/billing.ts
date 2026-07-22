@@ -85,3 +85,33 @@ export function getAutomationLimit(plan: string | null): number {
       return 0;
   }
 }
+
+/**
+ * Upsert a subscription for a user identified by email.
+ * Called from the Stripe webhook handler in serve.ts.
+ */
+export async function upsertSubscription(
+  email: string,
+  plan: "starter" | "pro",
+  stripeSessionId: string,
+  amountCents: number
+): Promise<{ success: boolean; error?: string }> {
+  // Find user by email
+  const users = await sql()`
+    SELECT id FROM users WHERE email = ${email}
+  `;
+
+  if (users.length === 0) {
+    return { success: false, error: "User not found" };
+  }
+
+  const userId = (users[0] as { id: number }).id;
+
+  // Insert subscription row
+  await sql()`
+    INSERT INTO subscriptions (user_id, plan, status, stripe_session_id)
+    VALUES (${userId}, ${plan}, 'active', ${stripeSessionId})
+  `;
+
+  return { success: true };
+}

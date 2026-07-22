@@ -220,6 +220,70 @@ for (let attempt = 1; ; attempt++) {
           }
         }
 
+        // Stripe webhook: /api/stripe/webhook
+        if (pathname === "/api/stripe/webhook" && req.method === "POST") {
+          let body: string;
+          try {
+            body = await req.text();
+          } catch {
+            return new Response(JSON.stringify({ error: "Bad request" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          let event: any;
+          try {
+            event = JSON.parse(body);
+          } catch {
+            return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          // Handle checkout.session.completed
+          if (event.type === "checkout.session.completed") {
+            const session = event.data.object;
+            const email = session.customer_details?.email;
+            const amountCents = session.amount_total;
+            const stripeSessionId = session.id;
+
+            if (!email) {
+              return new Response(JSON.stringify({ error: "No email" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+
+            // Map price/amount to plan
+            let plan: "starter" | "pro" = "starter";
+            if (amountCents >= 99900) plan = "pro";
+            else if (amountCents >= 49900) plan = "starter";
+
+            const { upsertSubscription } = await import("./src/lib/billing.js");
+            const result = await upsertSubscription(email, plan, stripeSessionId, amountCents);
+
+            if (!result.success) {
+              return new Response(JSON.stringify({ error: result.error }), {
+                status: 500,
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+
+            return new Response(JSON.stringify({ success: true, plan }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          // Acknowledge other event types
+          return new Response(JSON.stringify({ received: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
         if (pathname !== "/") {
           const file = Bun.file(CLIENT_DIR + pathname);
           if (await file.exists()) return new Response(file);
