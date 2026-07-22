@@ -4,13 +4,15 @@ import { getUserPlan } from "~/lib/billing";
 import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context }) => {
     const user = await getCurrentUserFn();
     if (!user || !user.id) {
       throw redirect({ to: "/login" });
     }
+    // Make user available to child routes via context
+    (context as Record<string, unknown>).user = user;
     const userId = user.id;
-    let subscription = { plan: null, status: null, currentPeriodEnd: null };
+    let subscription: { plan: string | null; status: string | null; currentPeriodEnd: string | null } = { plan: null, status: null, currentPeriodEnd: null };
     try {
       subscription = await getUserPlan({ data: { userId } });
     } catch {}

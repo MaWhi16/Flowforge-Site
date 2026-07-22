@@ -1,13 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useLoaderData } from "@tanstack/react-router";
 import { useState } from "react";
-import { getCurrentUserFn } from "~/lib/auth";
 import { createAutomation } from "~/lib/automations";
 
 export const Route = createFileRoute("/automations/new")({
-  beforeLoad: async () => {
-    const user = await getCurrentUserFn();
-    return { user };
-  },
   component: CreateAutomationPage,
 });
 
@@ -91,8 +86,8 @@ function VariableChips({ onInsert }: { onInsert: (v: string) => void }) {
 
 function CreateAutomationPage() {
   const navigate = useNavigate();
-  const loaderData = Route.useLoaderData();
-  const { user } = loaderData ?? { user: null as { id: number; email?: string } | null };
+  const parentData = useLoaderData({ from: "/automations" }) as { user: { id: number; email: string; name: string } | null; subscription: { plan: string | null; status: string | null; currentPeriodEnd: string | null } } | undefined;
+  const user = parentData?.user ?? null;
 
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");

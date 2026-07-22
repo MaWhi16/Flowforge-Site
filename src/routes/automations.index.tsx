@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { getCurrentUserFn } from "~/lib/auth";
 import { getMyAutomations } from "~/lib/dashboard";
 
 export const Route = createFileRoute("/automations/")({
-  beforeLoad: async () => {
-    const user = await getCurrentUserFn();
+  beforeLoad: async ({ context }) => {
+    const user = (context as Record<string, unknown>).user as { id: number; email: string; name: string } | undefined;
     const automations = await getMyAutomations({ data: { userId: user!.id } });
     return { automations };
   },

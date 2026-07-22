@@ -1,12 +1,11 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, useLoaderData } from "@tanstack/react-router";
 import { useState } from "react";
-import { getCurrentUserFn } from "~/lib/auth";
 import { getAutomation, updateAutomation, deleteAutomation, getAutomationRuns } from "~/lib/automations";
 import type { AutomationRunRecord } from "~/lib/automations";
 
 export const Route = createFileRoute("/automations/$id")({
-  beforeLoad: async ({ params }) => {
-    const user = await getCurrentUserFn();
+  beforeLoad: async ({ params, context }) => {
+    const user = (context as Record<string, unknown>).user as { id: number; email: string; name: string } | undefined;
 
     const userId = user!.id;
     const automationId = parseInt(params.id, 10);
@@ -24,7 +23,7 @@ export const Route = createFileRoute("/automations/$id")({
       throw redirect({ to: "/automations" });
     }
 
-    return { user, automation, runs };
+    return { automation, runs };
   },
   component: AutomationDetailPage,
 });
@@ -101,8 +100,7 @@ function RunStatusBadge({ status }: { status: AutomationRunRecord["status"] }) {
 function AutomationDetailPage() {
   const navigate = useNavigate();
   const loaderData = Route.useLoaderData();
-  const { user, automation, runs } = loaderData ?? {
-    user: null as { id: number; email?: string } | null,
+  const { automation, runs } = loaderData ?? {
     automation: null as {
       id: number;
       name: string;
@@ -115,6 +113,8 @@ function AutomationDetailPage() {
     } | null,
     runs: [] as AutomationRunRecord[],
   };
+  const parentData = useLoaderData({ from: "/automations" }) as { user: { id: number; email: string; name: string } | null; subscription: unknown } | undefined;
+  const user = parentData?.user ?? null as { id: number; email?: string } | null;
 
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
