@@ -1,13 +1,34 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { getCurrentUserFn } from "~/lib/auth";
 import { getUserPlan, type SubscriptionInfo } from "~/lib/billing";
 import { createAutomation } from "~/lib/automations";
 import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations/new")({
+  beforeLoad: async () => {
+    const user = await getCurrentUserFn();
+    if (!user) throw redirect({ to: "/login" });
+
+    const subscription = await getUserPlan({ data: { userId: user.id } });
+
+    return { user, subscription };
+  },
+  errorComponent: ErrorPage,
   component: CreateAutomationPage,
 });
+
+function ErrorPage() {
+  return (
+    <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold text-slate-800 mb-2">Something went wrong</h2>
+        <p className="text-slate-600 mb-4">Please try again or return to the dashboard.</p>
+        <a href="/dashboard" className="text-blue-600 hover:underline font-medium">Go to Dashboard</a>
+      </div>
+    </div>
+  );
+}
 
 // ── Types ──
 
@@ -90,44 +111,11 @@ function VariableChips({ onInsert }: { onInsert: (v: string) => void }) {
 function CreateAutomationPage() {
   const navigate = useNavigate();
 
-  // Auth + subscription state — loaded in useEffect to avoid createServerFn
-  // serialization issues during client-side navigation
-  const [authUser, setAuthUser] = useState<{ id: number; email: string; name: string } | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [subscription, setSubscription] = useState<SubscriptionInfo>({ plan: null, status: null, currentPeriodEnd: null });
-
-  useEffect(() => {
-    getCurrentUserFn()
-      .then(async (u) => {
-        if (!u || !u.id) {
-          window.location.href = "/login";
-          return;
-        }
-        setAuthUser(u);
-        setAuthLoading(false);
-
-        const sub = await getUserPlan({ data: { userId: u.id } });
-        setSubscription(sub);
-      })
-      .catch(() => {
-        window.location.href = "/login";
-      });
-  }, []);
-
-  // Show loading spinner while auth resolves
-  if (authLoading) {
-    return (
-      <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <svg className="w-8 h-8 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <span className="text-sm text-slate-500">Loading...</span>
-        </div>
-      </div>
-    );
-  }
+  const loaderData = Route.useLoaderData();
+  const { user, subscription } = loaderData ?? {
+    user: null,
+    subscription: { plan: null, status: null, currentPeriodEnd: null } as SubscriptionInfo,
+  };
 
   const currentPlan = subscription.plan;
   const isActive = subscription.status === "active";
@@ -241,7 +229,7 @@ function CreateAutomationPage() {
     try {
       const result = await createAutomation({
         data: {
-          userId: authUser!.id,
+          userId: user!.id,
           name: name.trim(),
           description: description.trim(),
           triggerType: triggerType!,
@@ -270,7 +258,7 @@ function CreateAutomationPage() {
   return (
     <div className="min-h-dvh bg-slate-50">
       <DashboardNav
-        userEmail={authUser?.email ?? ""}
+        userEmail={user?.email ?? ""}
         planLabel={planLabel}
         planBadgeColor={planBadgeColor}
       />
