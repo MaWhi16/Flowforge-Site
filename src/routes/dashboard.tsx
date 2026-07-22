@@ -10,7 +10,8 @@ import {
   getWebhookCount,
   logActivity,
 } from "~/lib/dashboard";
-import { getUserPlan, getAutomationLimit } from "~/lib/billing";
+import { getUserPlan } from "~/lib/billing";
+import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
@@ -76,12 +77,6 @@ function DashboardPage() {
       ? "bg-blue-100 text-blue-700"
       : "bg-amber-100 text-amber-700"
     : "bg-slate-100 text-slate-600";
-  const automationLimit = getAutomationLimit(isActive ? currentPlan : null);
-  const displayAutomationCount = automationLimit === Infinity
-    ? automations.length
-    : Math.min(automations.length, automationLimit);
-  const isOverLimit = automations.length > displayAutomationCount;
-
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-US", {
     weekday: "long",
@@ -92,52 +87,11 @@ function DashboardPage() {
 
   return (
     <div className="min-h-dvh bg-slate-50">
-      {/* Top Nav */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 flex items-center justify-between h-16">
-          <a href="/" className="flex items-center gap-2 shrink-0">
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="shrink-0"
-            >
-              <rect x="2" y="2" width="12" height="8" rx="3" fill="#2563EB" />
-              <rect x="2" y="22" width="12" height="8" rx="3" fill="#2563EB" />
-              <rect x="18" y="2" width="12" height="8" rx="3" fill="#1E3A5F" />
-              <rect x="18" y="14" width="12" height="8" rx="3" fill="#0EA5E9" />
-              <line x1="8" y1="10" x2="8" y2="22" stroke="#2563EB" strokeWidth="2" />
-              <line x1="24" y1="10" x2="24" y2="14" stroke="#0EA5E9" strokeWidth="2" />
-              <line x1="8" y1="14" x2="18" y2="14" stroke="#0EA5E9" strokeWidth="2" strokeDasharray="2 2" />
-            </svg>
-            <span className="font-heading text-xl font-bold text-navy-800">
-              FlowForge
-            </span>
-          </a>
-          <div className="flex items-center gap-3">
-            <a
-              href="/plans"
-              className="hidden sm:block text-sm font-medium text-slate-600 hover:text-navy-800 transition-colors duration-200"
-            >
-              Plans
-            </a>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${planBadgeColor}`}>
-              {planLabel}
-            </span>
-            <span className="text-sm text-slate-600 hidden sm:block">
-              {user?.email ?? ""}
-            </span>
-            <a
-              href="/logout"
-              className="text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors duration-200"
-            >
-              Log out
-            </a>
-          </div>
-        </div>
-      </nav>
+      <DashboardNav
+        userEmail={user?.email ?? ""}
+        planLabel={planLabel}
+        planBadgeColor={planBadgeColor}
+      />
 
       {/* Dashboard Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-8">
@@ -314,7 +268,7 @@ function DashboardPage() {
             )}
           </div>
 
-          {/* My Automations */}
+          {/* My Automations — Link to manage */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
             <h2 className="font-heading text-lg font-bold text-navy-800 mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -324,26 +278,36 @@ function DashboardPage() {
             </h2>
             {automations.length === 0 ? (
               <p className="text-sm text-slate-400 py-6 text-center">
-                No automations yet. They will appear here once created.
+                No automations yet.{" "}
+                <a href="/automations/new" className="text-blue-600 hover:underline font-medium">
+                  Create your first automation
+                </a>
+                .
               </p>
             ) : (
               <div className="space-y-3">
-                {automations.slice(0, automationLimit === Infinity ? automations.length : automationLimit).map((auto) => (
-                  <AutomationItem
+                {automations.slice(0, 5).map((auto) => (
+                  <a
                     key={auto.id}
-                    name={auto.name}
-                    description={auto.description}
-                    status={auto.status as "active" | "paused" | "draft"}
-                  />
+                    href={`/automations/${auto.id}`}
+                    className="block bg-slate-50 rounded-lg p-3 border border-slate-100 hover:border-slate-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`w-2 h-2 rounded-full ${
+                        auto.status === "active" ? "bg-emerald-500 animate-pulse" :
+                        auto.status === "paused" ? "bg-amber-500" : "bg-slate-400"
+                      }`} />
+                      <span className="text-sm font-semibold text-navy-800">{auto.name}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 ml-4">{auto.description ?? "No description"}</p>
+                  </a>
                 ))}
-                {isOverLimit && (
-                  <p className="text-xs text-center text-slate-400 pt-2">
-                    Showing {displayAutomationCount} of {automations.length} automations.{" "}
-                    <a href="/plans" className="text-blue-600 hover:underline font-medium">
-                      Upgrade to see all
-                    </a>
-                  </p>
-                )}
+                <a
+                  href="/automations"
+                  className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700 mt-2 py-2 rounded-lg border border-blue-200 hover:border-blue-300 transition-colors"
+                >
+                  Manage Automations →
+                </a>
               </div>
             )}
           </div>
@@ -495,37 +459,6 @@ function ActivityItem({
         <p className="text-sm text-slate-700 font-medium">{description}</p>
         <p className="text-xs text-slate-400 mt-0.5">{timeAgo}</p>
       </div>
-    </div>
-  );
-}
-
-function AutomationItem({
-  name,
-  description,
-  status,
-}: {
-  name: string;
-  description: string;
-  status: "active" | "paused" | "draft";
-}) {
-  const statusConfig = {
-    active: { dot: "bg-emerald-500 animate-pulse", label: "Running", labelColor: "text-emerald-600" },
-    paused: { dot: "bg-amber-500", label: "Paused", labelColor: "text-amber-600" },
-    draft: { dot: "bg-slate-400", label: "Draft", labelColor: "text-slate-500" },
-  };
-
-  const cfg = statusConfig[status];
-
-  return (
-    <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 hover:border-slate-200 transition-colors">
-      <div className="flex items-center gap-2 mb-1">
-        <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-        <h3 className="text-sm font-semibold text-navy-800">{name}</h3>
-        <span className={`ml-auto text-xs font-medium ${cfg.labelColor}`}>
-          {cfg.label}
-        </span>
-      </div>
-      <p className="text-xs text-slate-500 ml-4">{description}</p>
     </div>
   );
 }

@@ -150,3 +150,38 @@ export const getAutomation = createServerFn()
 
     return rowToRecord(rows[0] as Record<string, unknown>);
   });
+
+export interface AutomationRunRecord {
+  id: number;
+  status: "running" | "success" | "failed";
+  startedAt: string | null;
+  completedAt: string | null;
+  triggerEvent: unknown;
+  stepResults: unknown;
+  errorMessage: string | null;
+}
+
+export const getAutomationRuns = createServerFn()
+  .validator((d: { userId: number; automationId: number }) => d)
+  .handler(async ({ data }): Promise<AutomationRunRecord[]> => {
+    // Verify ownership first
+    const auto = await sql()`SELECT id FROM automations WHERE id = ${data.automationId} AND user_id = ${data.userId}`;
+    if (auto.length === 0) throw new Error("Automation not found");
+
+    const rows = await sql()`
+      SELECT id, status, started_at, completed_at, trigger_event, step_results, error_message
+      FROM automation_runs
+      WHERE automation_id = ${data.automationId}
+      ORDER BY started_at DESC
+      LIMIT 20
+    `;
+    return rows.map((r) => ({
+      id: r.id as number,
+      status: r.status as "running" | "success" | "failed",
+      startedAt: r.started_at ? String(r.started_at) : null,
+      completedAt: r.completed_at ? String(r.completed_at) : null,
+      triggerEvent: r.trigger_event as unknown,
+      stepResults: r.step_results as unknown,
+      errorMessage: r.error_message ? String(r.error_message) : null,
+    }));
+  });
