@@ -161,6 +161,57 @@ for (let attempt = 1; ; attempt++) {
         const url = new URL(req.url);
         const { pathname } = url;
 
+        // Auth API: /api/me — return current user from session cookie
+        if (pathname === "/api/me" && req.method === "GET") {
+          const cookie = req.headers.get("cookie") || "";
+          const match = cookie.match(/flowforge_session=([^;]+)/);
+          const sessionId = match?.[1];
+
+          if (!sessionId) {
+            return new Response(JSON.stringify({ user: null }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          const url = process.env.DATABASE_URL;
+          if (!url || url === "npx neonctl@latest init") {
+            return new Response(JSON.stringify({ user: null }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          const sql = neon(url);
+          const rows = await sql`
+            SELECT u.id, u.email, u.name
+            FROM sessions s
+            JOIN users u ON u.id = s.user_id
+            WHERE s.id = ${sessionId} AND s.expires_at > NOW()
+          `;
+
+          if (rows.length === 0) {
+            return new Response(JSON.stringify({ user: null }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          return new Response(
+            JSON.stringify({
+              user: {
+                id: rows[0].id,
+                email: rows[0].email,
+                name: rows[0].name,
+              },
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+
         // Webhook API: /api/webhook/{token}
         if (pathname.startsWith("/api/webhook/")) {
           const token = pathname.slice("/api/webhook/".length);

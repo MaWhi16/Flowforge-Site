@@ -6,7 +6,14 @@ import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations/")({
   beforeLoad: async () => {
-    const user = await getCurrentUserFn();
+    let user;
+    if (typeof window !== "undefined") {
+      const resp = await fetch("/api/me");
+      const data = (await resp.json()) as { user: { id: number; email: string; name: string } | null };
+      user = data.user;
+    } else {
+      user = await getCurrentUserFn();
+    }
     if (!user) throw redirect({ to: "/login" });
 
     const userId = user.id;
