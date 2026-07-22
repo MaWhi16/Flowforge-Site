@@ -1,26 +1,10 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { getCurrentUserFn } from "~/lib/auth";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { getUserPlan, type SubscriptionInfo } from "~/lib/billing";
 import { createAutomation } from "~/lib/automations";
 import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations/new")({
-  beforeLoad: async () => {
-    let user;
-    if (typeof window !== "undefined") {
-      const resp = await fetch("/api/me");
-      const data = (await resp.json()) as { user: { id: number; email: string; name: string } | null };
-      user = data.user;
-    } else {
-      user = await getCurrentUserFn();
-    }
-    if (!user) throw redirect({ to: "/login" });
-
-    const subscription = await getUserPlan({ data: { userId: user.id } });
-
-    return { user, subscription };
-  },
   errorComponent: ErrorPage,
   component: CreateAutomationPage,
 });
@@ -116,11 +100,33 @@ function VariableChips({ onInsert }: { onInsert: (v: string) => void }) {
 // ── Page Component ──
 
 function CreateAutomationPage() {
-  const loaderData = Route.useLoaderData();
-  const { user, subscription } = loaderData ?? {
-    user: null,
-    subscription: { plan: null, status: null, currentPeriodEnd: null } as SubscriptionInfo,
-  };
+  const [user, setUser] = useState<{ id: number; email: string; name: string } | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo>({
+    plan: null,
+    status: null,
+    currentPeriodEnd: null,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then(async (d) => {
+        if (!d.user) {
+          window.location.href = "/login";
+          return;
+        }
+        const currentUser = d.user as { id: number; email: string; name: string };
+        setUser(currentUser);
+
+        const sub = await getUserPlan({ data: { userId: currentUser.id } });
+        setSubscription(sub);
+        setLoading(false);
+      })
+      .catch(() => {
+        window.location.href = "/login";
+      });
+  }, []);
 
   const currentPlan = subscription.plan;
   const isActive = subscription.status === "active";
@@ -260,10 +266,23 @@ function CreateAutomationPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
+          <p className="text-slate-500 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   return (
     <div className="min-h-dvh bg-slate-50">
       <DashboardNav
-        userEmail={user?.email ?? ""}
+        userEmail={user.email}
         planLabel={planLabel}
         planBadgeColor={planBadgeColor}
       />
