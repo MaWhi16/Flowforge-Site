@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { getCurrentUserFn } from "~/lib/auth";
 import { getUserPlan, type SubscriptionInfo } from "~/lib/billing";
@@ -93,7 +93,6 @@ function RunStatusBadge({ status }) {
 }
 
 function AutomationDetailPage() {
-  const navigate = useNavigate();
   const loaderData = Route.useLoaderData();
   const { user, automation, runs, subscription } = loaderData ?? { user: null, automation: null, runs: [], subscription: { plan: null, status: null, currentPeriodEnd: null } };
   const [serverError, setServerError] = useState("");
@@ -118,14 +117,14 @@ function AutomationDetailPage() {
   }
   async function handleDelete() {
     setDeleting(true);
-    try { await deleteAutomation({ data: { userId: user.id, automationId: automation.id } }); navigate({ to: "/automations" }); }
+    try { await deleteAutomation({ data: { userId: user.id, automationId: automation.id } }); window.location.href = '/automations'; }
     catch (err) { setServerError(err instanceof Error ? err.message : "Failed to delete automation."); setShowDeleteModal(false); } finally { setDeleting(false); }
   }
   return (
     <div className="min-h-dvh bg-slate-50">
       <DashboardNav userEmail={user?.email ?? ""} planLabel={planLabel} planBadgeColor={planBadgeColor} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-8">
-        <a href="/automations" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-navy-800 transition-colors mb-6"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Back to Automations</a>
+        <a href="/automations" onClick={(e) => { e.preventDefault(); window.location.href = '/automations'; }} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-navy-800 transition-colors mb-6"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>Back to Automations</a>
         {serverError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg"><p className="text-red-700 text-sm">{serverError}</p></div>}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
           <div className="flex-1">
@@ -135,7 +134,7 @@ function AutomationDetailPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button type="button" onClick={toggleStatus} disabled={statusUpdating} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 shadow-sm disabled:opacity-60 ${automation.status === "active" ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}>{statusUpdating ? "Updating..." : automation.status === "active" ? "Pause" : "Activate"}</button>
-            <button type="button" onClick={() => navigate({ to: "/automations/new" })} className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Edit</button>
+            <button type="button" onClick={() => window.location.href = '/automations/new'} className="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Edit</button>
             <button type="button" onClick={() => setShowDeleteModal(true)} className="px-4 py-2 rounded-lg border border-red-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">Delete</button>
           </div>
         </div>

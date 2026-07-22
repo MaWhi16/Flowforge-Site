@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { getCurrentUserFn } from "~/lib/auth";
 import { getUserPlan, type SubscriptionInfo } from "~/lib/billing";
@@ -116,8 +116,6 @@ function VariableChips({ onInsert }: { onInsert: (v: string) => void }) {
 // ── Page Component ──
 
 function CreateAutomationPage() {
-  const navigate = useNavigate();
-
   const loaderData = Route.useLoaderData();
   const { user, subscription } = loaderData ?? {
     user: null,
@@ -252,7 +250,7 @@ function CreateAutomationPage() {
           }),
         },
       });
-      navigate({ to: "/automations/$id", params: { id: String(result.id) } });
+      window.location.href = `/automations/${result.id}`;
     } catch (err) {
       setServerError(
         err instanceof Error ? err.message : "Something went wrong. Please try again.",
@@ -273,6 +271,7 @@ function CreateAutomationPage() {
         {/* Back link */}
         <a
           href="/automations"
+          onClick={(e) => { e.preventDefault(); window.location.href = '/automations'; }}
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-navy-800 transition-colors mb-6"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

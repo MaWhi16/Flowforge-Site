@@ -44,6 +44,7 @@ export const DashboardNav: FC<DashboardNavProps> = ({
           </a>
           <a
             href="/automations"
+            onClick={(e) => { e.preventDefault(); window.location.href = '/automations'; }}
             className="hidden sm:block text-sm font-medium text-slate-600 hover:text-navy-800 transition-colors duration-200"
           >
             Automations

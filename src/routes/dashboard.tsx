@@ -285,7 +285,7 @@ function DashboardPage() {
             {automations.length === 0 ? (
               <p className="text-sm text-slate-400 py-6 text-center">
                 No automations yet.{" "}
-                <a href="/automations/new" className="text-blue-600 hover:underline font-medium">
+                <a href="/automations/new" onClick={(e) => { e.preventDefault(); window.location.href = '/automations/new'; }} className="text-blue-600 hover:underline font-medium">
                   Create your first automation
                 </a>
                 .
@@ -296,6 +296,7 @@ function DashboardPage() {
                   <a
                     key={auto.id}
                     href={`/automations/${auto.id}`}
+                    onClick={(e) => { e.preventDefault(); window.location.href = `/automations/${auto.id}`; }}
                     className="block bg-slate-50 rounded-lg p-3 border border-slate-100 hover:border-slate-200 transition-colors"
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -310,6 +311,7 @@ function DashboardPage() {
                 ))}
                 <a
                   href="/automations"
+                  onClick={(e) => { e.preventDefault(); window.location.href = '/automations'; }}
                   className="block text-center text-sm font-medium text-blue-600 hover:text-blue-700 mt-2 py-2 rounded-lg border border-blue-200 hover:border-blue-300 transition-colors"
                 >
                   Manage Automations →

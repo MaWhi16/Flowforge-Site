@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { getCurrentUserFn } from "~/lib/auth";
 import { getUserPlan, type SubscriptionInfo } from "~/lib/billing";
 import { getMyAutomations } from "~/lib/dashboard";
@@ -92,8 +92,6 @@ function StatusDot({ status }: { status: string }) {
 // ── Page Component ──
 
 function AutomationsPage() {
-  const navigate = useNavigate();
-
   const loaderData = Route.useLoaderData();
   const { user, automations, subscription } = loaderData ?? {
     user: null,
@@ -140,7 +138,7 @@ function AutomationsPage() {
           </div>
           <button
             type="button"
-            onClick={() => navigate({ to: "/automations/new" })}
+            onClick={() => { window.location.href = '/automations/new'; }}
             className="mt-4 sm:mt-0 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 px-5 py-2.5 text-sm transition-colors duration-200 shadow-sm"
           >
             Create Automation
@@ -163,7 +161,7 @@ function AutomationsPage() {
             </p>
             <button
               type="button"
-              onClick={() => navigate({ to: "/automations/new" })}
+              onClick={() => { window.location.href = '/automations/new'; }}
               className="bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 px-5 py-2.5 text-sm transition-colors duration-200 shadow-sm"
             >
               Create Your First Automation
@@ -199,7 +197,7 @@ function AutomationsPage() {
                     return (
                       <tr
                         key={auto.id}
-                        onClick={() => navigate({ to: "/automations/$id", params: { id: String(auto.id) } })}
+                        onClick={() => { window.location.href = `/automations/${auto.id}`; }}
                         className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
                       >
                         <td className="py-3.5 px-5">
@@ -238,7 +236,7 @@ function AutomationsPage() {
                 return (
                   <div
                     key={auto.id}
-                    onClick={() => navigate({ to: "/automations/$id", params: { id: String(auto.id) } })}
+                    onClick={() => { window.location.href = `/automations/${auto.id}`; }}
                     className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-slate-300 transition-colors cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-2">
