@@ -6,8 +6,14 @@ import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations/")({
   beforeLoad: async () => {
-    const user = await getCurrentUserFn();
-    if (!user) {
+    let user = null;
+    try {
+      user = await getCurrentUserFn();
+    } catch {
+      // Server function failed during client-side nav — redirect to login
+      throw redirect({ to: "/login" });
+    }
+    if (!user || !user.id) {
       throw redirect({ to: "/login" });
     }
 

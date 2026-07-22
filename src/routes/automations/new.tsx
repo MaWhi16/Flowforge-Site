@@ -7,13 +7,24 @@ import { DashboardNav } from "~/components/shared/DashboardNav";
 
 export const Route = createFileRoute("/automations/new")({
   beforeLoad: async () => {
-    const user = await getCurrentUserFn();
-    if (!user) {
+    let user = null;
+    try {
+      user = await getCurrentUserFn();
+    } catch {
+      // Server function failed during client-side nav — redirect to login
+      throw redirect({ to: "/login" });
+    }
+    if (!user || !user.id) {
       throw redirect({ to: "/login" });
     }
 
     const userId = user.id;
-    const subscription = await getUserPlan({ data: { userId } });
+    let subscription = { plan: null as string | null, status: null as string | null, currentPeriodEnd: null as string | null };
+    try {
+      subscription = await getUserPlan({ data: { userId } });
+    } catch {
+      // Use safe defaults if billing fetch fails during client nav
+    }
 
     return { user, subscription };
   },
