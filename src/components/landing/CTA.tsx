@@ -10,7 +10,7 @@ export function CTA() {
           workflow is battle-tested. Your pipeline on autopilot starts today.
         </p>
         <a
-          href="#pricing"
+          href="/signup"
           className="inline-block bg-amber-500 text-navy-900 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-amber-400 transition-colors duration-200 mt-8 shadow-lg shadow-amber-500/25"
         >
           Start Automating Free

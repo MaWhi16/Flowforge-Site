@@ -2,6 +2,7 @@ import { Nav } from "~/components/landing/Nav";
 import { Hero } from "~/components/landing/Hero";
 import { HowItWorks } from "~/components/landing/HowItWorks";
 import { Features } from "~/components/landing/Features";
+import { Testimonials } from "~/components/landing/Testimonials";
 import { Integrations } from "~/components/landing/Integrations";
 import { DashboardPreview } from "~/components/landing/DashboardPreview";
 import { Pricing } from "~/components/landing/Pricing";
@@ -20,6 +21,7 @@ function Home() {
       <Hero />
       <HowItWorks />
       <Features />
+      <Testimonials />
       <Integrations />
       <DashboardPreview />
       <Pricing />

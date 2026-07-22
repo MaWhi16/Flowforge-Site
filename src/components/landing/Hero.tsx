@@ -19,7 +19,7 @@ export function Hero() {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center">
               <a
-                href="#pricing"
+                href="/signup"
                 className="inline-block text-center bg-blue-600 text-white px-6 py-3 rounded-lg text-base font-semibold hover:bg-blue-700 transition-colors duration-200 shadow-md shadow-blue-600/20"
               >
                 Start Automating Free
@@ -32,7 +32,7 @@ export function Hero() {
               </a>
             </div>
             <p className="text-sm text-slate-400 mt-4">
-              Trusted by 500+ revenue teams
+              No credit card required · 2-minute setup
             </p>
           </div>
 
