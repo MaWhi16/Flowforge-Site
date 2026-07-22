@@ -8,7 +8,7 @@ export const Route = createFileRoute("/plans")({
     if (!user) {
       throw redirect({ to: "/login" });
     }
-    const subscription = await getUserPlan();
+    const subscription = await getUserPlan({ data: { userId: user.id } });
     return { user, subscription };
   },
   component: PlansPage,

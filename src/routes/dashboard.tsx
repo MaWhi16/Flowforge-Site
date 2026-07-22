@@ -19,40 +19,25 @@ export const Route = createFileRoute("/dashboard")({
       throw redirect({ to: "/login" });
     }
 
-    try {
-      const [metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount] =
-        await Promise.all([
-          getDashboardMetrics(),
-          getRecentActivity(),
-          getMyAutomations(),
-          getUserPlan(),
-          getWebhookUrl(),
-          getWebhookEvents(),
-          getWebhookCount(),
-        ]);
+    const userId = user.id;
 
-      // Log dashboard visit (fire-and-forget)
-      logActivity({
-        userId: user.id,
-        action: "dashboard_visit",
-        description: "Visited dashboard",
-      }).catch(() => {});
+    const [metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount] =
+      await Promise.all([
+        getDashboardMetrics({ data: { userId } }),
+        getRecentActivity({ data: { userId } }),
+        getMyAutomations({ data: { userId } }),
+        getUserPlan({ data: { userId } }),
+        getWebhookUrl({ data: { userId } }),
+        getWebhookEvents({ data: { userId } }),
+        getWebhookCount({ data: { userId } }),
+      ]);
 
-      return { user, metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount };
-    } catch {
-      // SSR may fail if cookies aren't forwarded to downstream server functions.
-      // Return safe defaults — the client will re-fetch after hydration.
-      return {
-        user,
-        metrics: { activeAutomations: 0, tasksThisWeek: 0, hoursSaved: 0, systemStatus: "Loading..." as const },
-        activity: [],
-        automations: [],
-        subscription: { plan: null, status: null, currentPeriodEnd: null },
-        webhookInfo: null,
-        webhookEvents: [],
-        webhookCount: 0,
-      };
-    }
+    // Log dashboard visit (fire-and-forget)
+    logActivity({
+      data: { userId, action: "dashboard_visit", description: "Visited dashboard" },
+    }).catch(() => {});
+
+    return { user, metrics, activity, automations, subscription, webhookInfo, webhookEvents, webhookCount };
   },
   component: DashboardPage,
 });

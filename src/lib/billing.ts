@@ -1,20 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
 import { sql } from "~/db";
-
-const SESSION_COOKIE = "flowforge_session";
-
-/** Resolve current user id from session token. Returns null if not logged in. */
-async function getUserId(): Promise<number | null> {
-  const token = getCookie(SESSION_COOKIE);
-  if (!token) return null;
-  const rows = await sql()`
-    SELECT user_id FROM sessions
-    WHERE id = ${token} AND expires_at > NOW()
-  `;
-  if (rows.length === 0) return null;
-  return rows[0].user_id as number;
-}
 
 export interface SubscriptionInfo {
   plan: "starter" | "pro" | "enterprise" | null;
@@ -25,31 +10,31 @@ export interface SubscriptionInfo {
 /**
  * Get the current user's subscription plan.
  * Returns { plan, status, currentPeriodEnd } or all nulls if no subscription.
+ * Accepts userId as a parameter (caller is responsible for authentication).
  */
-export const getUserPlan = createServerFn().handler(async (): Promise<SubscriptionInfo> => {
-  const userId = await getUserId();
-  if (!userId) {
-    return { plan: null, status: null, currentPeriodEnd: null };
-  }
+export const getUserPlan = createServerFn()
+  .validator((d: { userId: number }) => d)
+  .handler(async ({ data }): Promise<SubscriptionInfo> => {
+    const { userId } = data;
 
-  const rows = await sql()`
-    SELECT plan, status, current_period_end
-    FROM subscriptions
-    WHERE user_id = ${userId}
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
+    const rows = await sql()`
+      SELECT plan, status, current_period_end
+      FROM subscriptions
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
 
-  if (rows.length === 0) {
-    return { plan: null, status: null, currentPeriodEnd: null };
-  }
+    if (rows.length === 0) {
+      return { plan: null, status: null, currentPeriodEnd: null };
+    }
 
-  return {
-    plan: rows[0].plan as "starter" | "pro" | "enterprise",
-    status: rows[0].status as "active" | "past_due" | "canceled" | "trialing",
-    currentPeriodEnd: rows[0].current_period_end ? String(rows[0].current_period_end) : null,
-  };
-});
+    return {
+      plan: rows[0].plan as "starter" | "pro" | "enterprise",
+      status: rows[0].status as "active" | "past_due" | "canceled" | "trialing",
+      currentPeriodEnd: rows[0].current_period_end ? String(rows[0].current_period_end) : null,
+    };
+  });
 
 /**
  * Require the current user to have at least the specified plan.
@@ -57,11 +42,11 @@ export const getUserPlan = createServerFn().handler(async (): Promise<Subscripti
  */
 export const requirePlan = createServerFn()
   .validator((data: unknown) => {
-    const d = data as { plan: string };
-    return { plan: d.plan as "starter" | "pro" | "enterprise" };
+    const d = data as { userId: number; plan: string };
+    return { userId: d.userId, plan: d.plan as "starter" | "pro" | "enterprise" };
   })
   .handler(async ({ data }) => {
-    const sub = await getUserPlan();
+    const sub = await getUserPlan({ data: { userId: data.userId } });
     if (!sub.plan || sub.status !== "active") {
       throw new Error("An active subscription is required for this feature.");
     }
