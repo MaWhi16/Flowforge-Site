@@ -26,7 +26,8 @@ export function Pricing() {
               "Email support",
               "Dashboard access",
             ]}
-            cta="Start Free Trial"
+            cta="Buy Starter"
+            href="https://buy.stripe.com/14AdRb69XdzZbV90EY7AI00"
             featured={false}
           />
 
@@ -43,7 +44,8 @@ export function Pricing() {
               "Custom dashboards",
               "Slack integration",
             ]}
-            cta="Start Free Trial"
+            cta="Buy Pro"
+            href="https://buy.stripe.com/00w28teGt67x2kzdrK7AI01"
             featured={true}
           />
 
@@ -61,6 +63,7 @@ export function Pricing() {
               "SSO & audit logs",
             ]}
             cta="Talk to Sales"
+            href="mailto:hello@flowforge.dev?subject=Enterprise%20Inquiry"
             featured={false}
           />
         </div>
@@ -76,6 +79,7 @@ function PricingCard({
   description,
   features,
   cta,
+  href,
   featured,
 }: {
   name: string;
@@ -84,6 +88,7 @@ function PricingCard({
   description: string;
   features: string[];
   cta: string;
+  href: string;
   featured: boolean;
 }) {
   return (
@@ -128,7 +133,7 @@ function PricingCard({
         ))}
       </ul>
       <a
-        href="mailto:hello@flowforge.dev?subject=Free%20Trial"
+        href={href}
         className={`mt-8 block text-center py-3 rounded-lg text-sm font-semibold transition-colors duration-200 ${
           featured
             ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20"
