@@ -212,6 +212,63 @@ for (let attempt = 1; ; attempt++) {
           );
         }
 
+        // Waitlist API: POST /api/waitlist
+        if (pathname === "/api/waitlist" && req.method === "POST") {
+          let body: any;
+          try {
+            body = await req.json();
+          } catch {
+            return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          const email = String(body.email || "").trim().toLowerCase();
+          const name = String(body.name || "").trim();
+
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return new Response(JSON.stringify({ error: "Valid email required" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          const dbUrl = process.env.DATABASE_URL;
+          if (!dbUrl || dbUrl === "npx neonctl@latest init") {
+            return new Response(JSON.stringify({ error: "DB not configured" }), {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          const waitlistSql = neon(dbUrl);
+
+          // Check for duplicate
+          const existing = await waitlistSql`SELECT id FROM waitlist WHERE email = ${email}`;
+          if (existing.length > 0) {
+            return new Response(JSON.stringify({ success: true, message: "Already on the waitlist!" }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          await waitlistSql`INSERT INTO waitlist (email, name, source) VALUES (${email}, ${name || null}, 'landing_page')`;
+
+          // Enqueue welcome email
+          const { enqueueEmail } = await import("./src/lib/email.js");
+          await enqueueEmail(
+            email,
+            "You're on the FlowForge waitlist! 🚀",
+            `Hi${name ? " " + name : ""},\n\nThanks for joining the FlowForge waitlist! We're building the easiest way to automate your sales workflow — connecting CRM, email, and spreadsheets without code.\n\nWe'll let you know as soon as early access opens up. In the meantime, feel free to reply with any questions.\n\n— The FlowForge Team`
+          );
+
+          return new Response(JSON.stringify({ success: true, message: "Welcome to the waitlist!" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
         // Webhook API: /api/webhook/{token}
         if (pathname.startsWith("/api/webhook/")) {
           const token = pathname.slice("/api/webhook/".length);

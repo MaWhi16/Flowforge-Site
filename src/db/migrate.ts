@@ -192,6 +192,18 @@ async function main() {
   `;
   console.log("  -> email_queue table ready.");
 
+  console.log("Running migration: create waitlist table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS waitlist (
+      id SERIAL PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT,
+      source TEXT DEFAULT 'landing_page',
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  console.log("  -> waitlist table ready.");
+
   console.log("All migrations complete.");
 }
 
