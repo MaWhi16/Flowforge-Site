@@ -71,6 +71,12 @@ export function Nav() {
           {!loading && user ? (
             <>
               <a
+                href="/plans"
+                className="hidden md:block text-sm font-medium text-slate-600 hover:text-navy-800 transition-colors duration-200"
+              >
+                Plans
+              </a>
+              <a
                 href="/dashboard"
                 className="hidden md:block text-sm font-medium text-slate-600 hover:text-navy-800 transition-colors duration-200"
               >

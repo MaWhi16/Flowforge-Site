@@ -79,6 +79,20 @@ async function main() {
   `;
   console.log("  -> activity_log ready.");
 
+  console.log("Running migration: create subscriptions table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      plan TEXT NOT NULL DEFAULT 'starter' CHECK (plan IN ('starter', 'pro', 'enterprise')),
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'past_due', 'canceled', 'trialing')),
+      stripe_session_id TEXT,
+      current_period_end TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  console.log("  -> subscriptions ready.");
+
   console.log("All migrations complete.");
 }
 

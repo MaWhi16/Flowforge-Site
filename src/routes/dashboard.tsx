@@ -6,6 +6,7 @@ import {
   getMyAutomations,
   logActivity,
 } from "~/lib/dashboard";
+import { getUserPlan, getAutomationLimit } from "~/lib/billing";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
@@ -14,10 +15,11 @@ export const Route = createFileRoute("/dashboard")({
       throw redirect({ to: "/login" });
     }
 
-    const [metrics, activity, automations] = await Promise.all([
+    const [metrics, activity, automations, subscription] = await Promise.all([
       getDashboardMetrics(),
       getRecentActivity(),
       getMyAutomations(),
+      getUserPlan(),
     ]);
 
     // Log dashboard visit (fire-and-forget)
@@ -27,13 +29,29 @@ export const Route = createFileRoute("/dashboard")({
       description: "Visited dashboard",
     }).catch(() => {});
 
-    return { user, metrics, activity, automations };
+    return { user, metrics, activity, automations, subscription };
   },
   component: DashboardPage,
 });
 
 function DashboardPage() {
-  const { user, metrics, activity, automations } = Route.useLoaderData();
+  const { user, metrics, activity, automations, subscription } = Route.useLoaderData();
+
+  const currentPlan = subscription.plan;
+  const isActive = subscription.status === "active";
+  const planLabel = currentPlan && isActive
+    ? currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)
+    : "Free";
+  const planBadgeColor = currentPlan && isActive
+    ? currentPlan === "pro" || currentPlan === "enterprise"
+      ? "bg-blue-100 text-blue-700"
+      : "bg-amber-100 text-amber-700"
+    : "bg-slate-100 text-slate-600";
+  const automationLimit = getAutomationLimit(isActive ? currentPlan : null);
+  const displayAutomationCount = automationLimit === Infinity
+    ? automations.length
+    : Math.min(automations.length, automationLimit);
+  const isOverLimit = automations.length > displayAutomationCount;
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-US", {
@@ -69,7 +87,16 @@ function DashboardPage() {
               FlowForge
             </span>
           </a>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <a
+              href="/plans"
+              className="hidden sm:block text-sm font-medium text-slate-600 hover:text-navy-800 transition-colors duration-200"
+            >
+              Plans
+            </a>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${planBadgeColor}`}>
+              {planLabel}
+            </span>
             <span className="text-sm text-slate-600 hidden sm:block">
               {user.email}
             </span>
@@ -85,6 +112,28 @@ function DashboardPage() {
 
       {/* Dashboard Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-8">
+        {/* Upgrade Banner — shown if no active subscription */}
+        {(!currentPlan || !isActive) && (
+          <div className="mb-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-5 text-white shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="font-heading font-bold text-lg">
+                  🚀 Upgrade to access all features
+                </p>
+                <p className="text-sm text-blue-100 mt-1">
+                  You're on the Free plan. Upgrade to Starter or Pro to unlock unlimited automations, more connections, and priority support.
+                </p>
+              </div>
+              <a
+                href="/plans"
+                className="shrink-0 bg-white text-blue-700 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors duration-200 shadow-sm text-center"
+              >
+                Upgrade Now
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* Welcome Bar */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-8">
           <div>
@@ -104,8 +153,8 @@ function DashboardPage() {
         {/* Metric Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <MetricCard
-            value={metrics.activeAutomations}
-            label="Active Automations"
+            value={displayAutomationCount}
+            label={automationLimit === Infinity ? "Active Automations" : `Automations (${displayAutomationCount}/${automationLimit})`}
             accent="blue"
             icon={
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -188,7 +237,7 @@ function DashboardPage() {
               </p>
             ) : (
               <div className="space-y-3">
-                {automations.map((auto) => (
+                {automations.slice(0, automationLimit === Infinity ? automations.length : automationLimit).map((auto) => (
                   <AutomationItem
                     key={auto.id}
                     name={auto.name}
@@ -196,6 +245,14 @@ function DashboardPage() {
                     status={auto.status as "active" | "paused" | "draft"}
                   />
                 ))}
+                {isOverLimit && (
+                  <p className="text-xs text-center text-slate-400 pt-2">
+                    Showing {displayAutomationCount} of {automations.length} automations.{" "}
+                    <a href="/plans" className="text-blue-600 hover:underline font-medium">
+                      Upgrade to see all
+                    </a>
+                  </p>
+                )}
               </div>
             )}
           </div>
