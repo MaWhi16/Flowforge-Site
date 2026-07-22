@@ -66,18 +66,6 @@ function DashboardPage() {
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [testResult, setTestResult] = useState<string | null>(null);
 
-  // SSR may deliver null/undefined loader data; show a loading state until hydrated.
-  if (!user || !metrics) {
-    return (
-      <div className="min-h-dvh bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-slate-500 text-lg font-medium">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   const currentPlan = subscription.plan;
   const isActive = subscription.status === "active";
   const planLabel = currentPlan && isActive
@@ -139,7 +127,7 @@ function DashboardPage() {
               {planLabel}
             </span>
             <span className="text-sm text-slate-600 hidden sm:block">
-              {user.email}
+              {user?.email ?? ""}
             </span>
             <a
               href="/logout"
@@ -179,14 +167,14 @@ function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-8">
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-bold text-navy-800">
-              Welcome back, {user.name}
+              Welcome back, {user?.name ?? ""}
             </h1>
             <p className="text-slate-500 mt-1 text-sm">{dateStr}</p>
           </div>
           <div className="flex items-center gap-2 mt-3 sm:mt-0">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-sm font-medium text-emerald-700">
-              {metrics.systemStatus}
+              {metrics?.systemStatus ?? "Loading..."}
             </span>
           </div>
         </div>
@@ -276,7 +264,7 @@ function DashboardPage() {
             }
           />
           <MetricCard
-            value={metrics.hoursSaved}
+            value={metrics?.hoursSaved ?? 0}
             label="Hours Saved / Week"
             accent="amber"
             icon={
