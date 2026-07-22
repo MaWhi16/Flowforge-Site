@@ -99,35 +99,6 @@ export const signupUser = createServerFn()
 
     const userId = rows[0].id as number;
 
-    // Seed demo automations for new user
-    const demos = [
-      {
-        name: "Lead-to-CRM Sync",
-        description:
-          "Automatically syncs new leads from your forms into your CRM. Routes leads to the right rep based on territory rules.",
-        status: "active",
-      },
-      {
-        name: "Follow-up Sequence",
-        description:
-          "Sends a 3-email follow-up sequence when a lead enters the 'Contacted' stage. Includes personalized merge fields.",
-        status: "active",
-      },
-      {
-        name: "Pipeline Reporter",
-        description:
-          "Generates a weekly pipeline health report and emails it to the sales team every Monday at 8 AM.",
-        status: "active",
-      },
-    ];
-
-    for (const demo of demos) {
-      await sql()`
-        INSERT INTO automations (user_id, name, description, status)
-        VALUES (${userId}, ${demo.name}, ${demo.description}, ${demo.status})
-      `;
-    }
-
     // Create webhook endpoint for the new user
     const webhookToken = crypto.randomUUID();
     await sql()`
@@ -138,7 +109,7 @@ export const signupUser = createServerFn()
     // Log initial activity
     await sql()`
       INSERT INTO activity_log (user_id, action, description)
-      VALUES (${userId}, 'account_created', 'Account created and demo automations seeded')
+      VALUES (${userId}, 'account_created', 'Account created')
     `;
 
     const token = crypto.randomUUID();
