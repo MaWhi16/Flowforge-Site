@@ -1,16 +1,8 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { getCurrentUserFn } from "~/lib/auth";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { getUserPlan } from "~/lib/billing";
 
 export const Route = createFileRoute("/plans")({
-  beforeLoad: async () => {
-    const user = await getCurrentUserFn();
-    if (!user) {
-      throw redirect({ to: "/login" });
-    }
-    const subscription = await getUserPlan({ data: { userId: user.id } });
-    return { user, subscription };
-  },
   component: PlansPage,
 });
 
@@ -18,7 +10,7 @@ const PLANS = [
   {
     name: "Starter",
     price: "$499",
-    period: "/mo",
+    period: "one-time",
     description: "Solo reps and small teams",
     features: [
       "5 active workflows",
@@ -27,14 +19,14 @@ const PLANS = [
       "Dashboard access",
     ],
     cta: "Choose Starter",
-    href: "https://buy.stripe.com/14AdRb69XdzZbV90EY7AI00",
+    href: "https://buy.stripe.com/5kQbJ30PDbrRf7levO7AI02",
     planKey: "starter" as const,
     featured: false,
   },
   {
     name: "Pro",
     price: "$999",
-    period: "/mo",
+    period: "one-time",
     description: "Growing revenue teams",
     features: [
       "Unlimited workflows",
@@ -44,7 +36,7 @@ const PLANS = [
       "Slack integration",
     ],
     cta: "Choose Pro",
-    href: "https://buy.stripe.com/00w28teGt67x2kzdrK7AI01",
+    href: "https://buy.stripe.com/5kQ00l8i5eE3gbpevO7AI03",
     planKey: "pro" as const,
     featured: true,
   },
@@ -68,7 +60,26 @@ const PLANS = [
 ];
 
 function PlansPage() {
-  const { user, subscription } = Route.useLoaderData();
+  const [user, setUser] = useState<{ email: string; id: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<{ plan: string | null; status: string | null }>({ plan: null, status: null });
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then(async (d) => {
+        if (!d.user) { window.location.href = "/login"; return; }
+        setUser(d.user);
+        const sub = await getUserPlan({ data: { userId: d.user.id } }).catch(() => ({ plan: null, status: null }));
+        setSubscription(sub);
+        setLoading(false);
+      })
+      .catch(() => { window.location.href = "/login"; });
+  }, []);
+
+  if (loading) return <div className="min-h-dvh bg-slate-50 flex items-center justify-center"><span className="text-slate-500">Loading...</span></div>;
+  if (!user) return null;
+
   const currentPlan = subscription.plan;
   const isActive = subscription.status === "active";
 
