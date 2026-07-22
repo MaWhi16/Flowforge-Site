@@ -53,7 +53,7 @@ export const getMyAutomations = createServerFn()
     const { userId } = data;
 
     const rows = await sql()`
-      SELECT id, name, description, status, created_at, updated_at
+      SELECT id, name, description, status, trigger_type, trigger_config, steps, last_run_at, run_count, created_at, updated_at
       FROM automations
       WHERE user_id = ${userId}
       ORDER BY updated_at DESC
@@ -64,6 +64,11 @@ export const getMyAutomations = createServerFn()
       name: r.name as string,
       description: r.description as string,
       status: r.status as string,
+      triggerType: r.trigger_type as string,
+      triggerConfig: r.trigger_config as unknown,
+      steps: r.steps as unknown,
+      lastRunAt: r.last_run_at ? String(r.last_run_at) : null,
+      runCount: r.run_count as number,
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
     }));
